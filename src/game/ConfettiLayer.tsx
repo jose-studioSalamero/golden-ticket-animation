@@ -64,7 +64,10 @@ export function ConfettiLayer({ burstKey, raining }: Props) {
   }, [raining]);
 
   useEffect(() => {
-    if (burstKey === 0) return;
+    if (burstKey === 0) {
+      particles.current = [];
+      return;
+    }
     const canvas = canvasRef.current;
     if (!canvas) return;
     const rect = canvas.getBoundingClientRect();

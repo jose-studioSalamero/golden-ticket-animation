@@ -13,30 +13,65 @@ export function Ticket({ pose, isLandscape }: Props) {
   const inFront = pose === "edge" || pose === "landed" || pose === "gilded";
 
   const poseMotion = {
-    pocket: { y: 18, x: 0, rotateY: 0, rotateZ: 0, scale: 1 },
-    rising: { y: -58, x: 0, rotateY: 0, rotateZ: 0, scale: 1 },
-    edge: { y: -28, x: 18, rotateY: 82, rotateZ: -36, scale: 1 },
-    landed: { y: -118, x: 10, rotateY: 0, rotateZ: -8, scale: 1.08 },
-    gilded: { y: -118, x: 10, rotateY: 0, rotateZ: -8, scale: 1.08 },
+    pocket: {
+      y: 0,
+      x: 0,
+      rotateY: 0,
+      rotateZ: 0,
+      scale: 1,
+      transformPerspective: 1400,
+    },
+    rising: {
+      y: -56,
+      x: 0,
+      rotateY: 0,
+      rotateZ: 0,
+      scale: 1,
+      transformPerspective: 1400,
+    },
+    edge: {
+      y: -24,
+      x: 16,
+      rotateY: 88,
+      rotateZ: -36,
+      scale: 1,
+      transformPerspective: 1400,
+    },
+    landed: {
+      y: -102,
+      x: 10,
+      rotateY: 0,
+      rotateZ: -8,
+      scale: 1.06,
+      transformPerspective: 1400,
+    },
+    gilded: {
+      y: -102,
+      x: 10,
+      rotateY: 0,
+      rotateZ: -8,
+      scale: 1.06,
+      transformPerspective: 1400,
+    },
   }[pose];
 
   return (
     <motion.div
       className="absolute left-1/2 top-0 origin-center"
       style={{
-        zIndex: inFront ? 8 : 4,
+        zIndex: inFront ? 8 : 2,
         transformStyle: "preserve-3d",
         width: isLandscape ? "min(560px, 92vw)" : "84%",
-        height: isLandscape ? "min(236px, 42vw)" : "108%",
+        height: isLandscape ? "min(236px, 42vw)" : "100%",
         marginLeft: isLandscape ? "calc(min(560px, 92vw) / -2)" : "-42%",
         filter: gilded
           ? "drop-shadow(0 18px 28px rgba(201, 146, 30, 0.35))"
-          : "drop-shadow(0 16px 24px rgba(0,0,0,0.35))",
+          : "drop-shadow(0 16px 24px rgba(0,0,0,0.28))",
       }}
       initial={false}
       animate={poseMotion}
       transition={{
-        duration: pose === "edge" ? 0.42 : pose === "rising" ? 0.95 : 0.55,
+        duration: pose === "edge" ? 0.48 : pose === "rising" ? 0.95 : 0.55,
         ease: pose === "edge" ? [0.4, 0, 0.6, 1] : EASE,
       }}
     >
@@ -62,12 +97,12 @@ export function Ticket({ pose, isLandscape }: Props) {
             <path
               fill="url(#ticketPaper)"
               fillRule="evenodd"
-              d="M20 0 H620 Q640 0 640 20 V250 Q640 270 620 270 H20 Q0 270 0 250 V20 Q0 0 20 0 Z M0 135 a 17 17 0 1 0 0.01 0 M640 135 a 17 17 0 1 0 -0.01 0"
+              d="M20 0 H620 Q640 0 640 20 V250 Q640 270 620 270 H20 Q0 270 0 250 V20 Q0 0 20 0 Z M0 135 a 22 22 0 1 0 0.01 0 M640 135 a 22 22 0 1 0 -0.01 0"
             />
             <motion.path
               fill="url(#ticketGold)"
               fillRule="evenodd"
-              d="M20 0 H620 Q640 0 640 20 V250 Q640 270 620 270 H20 Q0 270 0 250 V20 Q0 0 20 0 Z M0 135 a 17 17 0 1 0 0.01 0 M640 135 a 17 17 0 1 0 -0.01 0"
+              d="M20 0 H620 Q640 0 640 20 V250 Q640 270 620 270 H20 Q0 270 0 250 V20 Q0 0 20 0 Z M0 135 a 22 22 0 1 0 0.01 0 M640 135 a 22 22 0 1 0 -0.01 0"
               initial={{ opacity: 0 }}
               animate={{ opacity: gilded ? 1 : 0 }}
               transition={{ duration: 1, ease: "easeInOut" }}
@@ -82,7 +117,7 @@ export function Ticket({ pose, isLandscape }: Props) {
       </svg>
 
       {isLandscape ? (
-        <div className="relative z-10 flex h-full w-full flex-col justify-center px-[10%] py-3">
+        <div className="relative flex h-full w-full flex-col justify-center px-[10%] py-3">
           <TicketCopy gilded={gilded} />
         </div>
       ) : null}
@@ -108,7 +143,7 @@ function TicketCopy({ gilded }: { gilded: boolean }) {
         <span className="w-9" />
       </div>
       <div className="mb-1 h-px w-full" style={{ background: inkSoft, transition: "background 0.95s ease" }} />
-      <p className="font-display text-[clamp(2rem,6vw,3.9rem)] font-bold leading-[0.9] tracking-wide">
+      <p className="font-display whitespace-nowrap text-[clamp(1.7rem,4.8vw,3.35rem)] font-bold leading-none tracking-[0.04em]">
         GOLDEN TICKET
       </p>
       <div className="mt-2 flex items-end justify-between gap-3">

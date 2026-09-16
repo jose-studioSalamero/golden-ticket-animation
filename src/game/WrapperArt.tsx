@@ -12,7 +12,7 @@ export function WrapperArt({ taps }: Props) {
   return (
     <svg
       viewBox="0 0 300 420"
-      className="absolute inset-0 h-full w-full"
+      className="pointer-events-none absolute inset-0 z-[6] h-full w-full"
       aria-hidden
     >
       <defs>
@@ -141,15 +141,23 @@ export function WrapperArt({ taps }: Props) {
           </text>
           <path
             fill="#3d1c10"
-            d="M-70 48 C-60 70 -48 58 -40 86 C-34 64 -22 78 -18 52 C-30 60 -50 50 -70 48 Z"
+            d="M-62 42 C-58 58 -60 78 -54 96 C-50 108 -62 110 -60 96 C-62 78 -66 58 -62 42 Z"
           />
           <path
             fill="#4a2416"
-            d="M-10 50 C-2 78 6 62 12 90 C18 66 26 80 34 52 C18 64 4 56 -10 50 Z"
+            d="M-28 44 C-24 70 -26 92 -20 118 C-16 132 -30 132 -28 116 C-30 92 -32 70 -28 44 Z"
           />
           <path
             fill="#3d1c10"
-            d="M48 48 C56 76 66 60 74 88 C80 64 90 72 96 50 C80 60 62 54 48 48 Z"
+            d="M6 42 C10 62 8 88 14 112 C18 124 4 124 6 110 C4 86 2 62 6 42 Z"
+          />
+          <path
+            fill="#4a2416"
+            d="M40 44 C44 66 42 86 48 104 C52 116 38 116 40 102 C38 84 36 66 40 44 Z"
+          />
+          <path
+            fill="#3d1c10"
+            d="M72 42 C76 56 74 74 80 90 C84 100 70 100 72 88 C70 72 68 56 72 42 Z"
           />
           <text
             textAnchor="middle"

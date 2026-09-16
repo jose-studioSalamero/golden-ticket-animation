@@ -44,10 +44,10 @@ export function useGame() {
     await wait(900, timers.current);
     if (!running.current) return;
     setTicketPose("edge");
-    await wait(420, timers.current);
+    await wait(520, timers.current);
     if (!running.current) return;
     setIsLandscape(true);
-    await wait(60, timers.current);
+    await wait(80, timers.current);
     if (!running.current) return;
     setTicketPose("landed");
     await wait(550, timers.current);

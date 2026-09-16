@@ -66,7 +66,9 @@ export function Game() {
             }
             onClick={game.tap}
             disabled={game.locked}
-            className="relative block overflow-visible"
+            className={`relative isolate block ${
+              game.ticketPose === "pocket" ? "overflow-hidden" : "overflow-visible"
+            }`}
             style={{
               width: "min(300px, 64vw)",
               height: "calc(min(300px, 64vw) * 1.4)",
@@ -89,7 +91,6 @@ export function Game() {
             <ChocolateSquares />
             <Ticket pose={game.ticketPose} isLandscape={game.isLandscape} />
             <WrapperArt taps={game.taps} />
-            {game.taps === 0 ? <TapHint /> : null}
           </motion.button>
         </motion.div>
       </div>
@@ -123,13 +124,5 @@ export function Game() {
 
       <PrizeBanner visible={celebrating} />
     </div>
-  );
-}
-
-function TapHint() {
-  return (
-    <span className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center">
-      <span className="absolute h-24 w-24 rounded-full border border-[#f3dd8a]/40 animate-ping" />
-    </span>
   );
 }
