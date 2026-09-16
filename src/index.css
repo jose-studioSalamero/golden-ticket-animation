@@ -1,0 +1,110 @@
+@import "tailwindcss";
+
+@theme {
+  --font-display: "Cinzel", ui-serif, Georgia, serif;
+  --font-body: "Cormorant Garamond", ui-serif, Georgia, serif;
+  --font-script: "Great Vibes", cursive;
+  --color-stage: #2a1148;
+  --color-gold: #d4b056;
+  --color-gold-bright: #f3dd8a;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  min-height: 100%;
+  height: 100%;
+  background: #2a1148;
+}
+
+body {
+  font-family: var(--font-body);
+  color: #f4e7c5;
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+  overflow: hidden;
+}
+
+#root {
+  width: 100%;
+}
+
+button {
+  font-family: inherit;
+}
+
+.gold-text {
+  background: linear-gradient(180deg, #f8e7a8 0%, #d4b056 52%, #a67c1f 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.ticket-sheen {
+  background: linear-gradient(
+    105deg,
+    transparent 32%,
+    rgba(255, 255, 255, 0.55) 48%,
+    transparent 64%
+  );
+  background-size: 220% 100%;
+  animation: sheen 1.8s ease-in-out 0.2s both;
+}
+
+@keyframes sheen {
+  from {
+    background-position: 120% 0;
+  }
+  to {
+    background-position: -40% 0;
+  }
+}
+
+@keyframes glow-pulse {
+  0%,
+  100% {
+    opacity: 0.72;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.06);
+  }
+}
+
+.stage-glow {
+  animation: glow-pulse 4.6s ease-in-out infinite;
+}
+
+.chocolate-piece {
+  background: linear-gradient(160deg, #8a5740 0%, #5c321f 42%, #3d1c10 100%);
+  box-shadow:
+    inset 0 0 0 1px rgba(30, 10, 4, 0.55),
+    0 1px 0 rgba(255, 190, 140, 0.12);
+}
+
+.chocolate-piece::before {
+  content: "";
+  position: absolute;
+  inset: 11%;
+  background: linear-gradient(155deg, #b67a58 0%, #7a4630 46%, #4a2416 100%);
+  box-shadow:
+    3px 4px 8px rgba(0, 0, 0, 0.38),
+    -1px -1px 3px rgba(255, 196, 150, 0.22);
+  clip-path: polygon(12% 0, 88% 0, 100% 12%, 100% 88%, 88% 100%, 12% 100%, 0 88%, 0 12%);
+}
+
+.idle-bob {
+  animation: bob 3.4s ease-in-out infinite;
+}
+
+@keyframes bob {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}

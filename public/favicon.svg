@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <rect width="64" height="64" rx="14" fill="#2a1148"/>
+  <rect x="10" y="22" width="44" height="22" rx="4" fill="url(#g)"/>
+  <circle cx="10" cy="33" r="5" fill="#2a1148"/>
+  <circle cx="54" cy="33" r="5" fill="#2a1148"/>
+  <text x="32" y="37" text-anchor="middle" font-size="9" font-family="serif" font-weight="700" fill="#3a1c10">GOLD</text>
+  <defs>
+    <linearGradient id="g" x1="10" y1="22" x2="54" y2="44">
+      <stop stop-color="#f8e7a8"/>
+      <stop offset="1" stop-color="#c4921e"/>
+    </linearGradient>
+  </defs>
+</svg>
