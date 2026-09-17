@@ -1,16 +1,19 @@
 import { motion } from "framer-motion";
 import type { TicketPose } from "./constants";
+import { PRIZE_COPY, type Prize } from "./prizes";
 
 type Props = {
   pose: TicketPose;
   isLandscape: boolean;
+  prize: Prize | null;
 };
 
 const EASE = [0.22, 1, 0.36, 1] as const;
 
-export function Ticket({ pose, isLandscape }: Props) {
-  const gilded = pose === "gilded";
+export function Ticket({ pose, isLandscape, prize }: Props) {
+  const gilded = pose === "gilded" && prize !== "discount";
   const inFront = pose === "edge" || pose === "landed" || pose === "gilded";
+  const variant: Prize = prize ?? "golden";
 
   const poseMotion = {
     pocket: {
@@ -118,7 +121,7 @@ export function Ticket({ pose, isLandscape }: Props) {
 
       {isLandscape ? (
         <div className="relative flex h-full w-full flex-col justify-center px-[10%] py-3">
-          <TicketCopy gilded={gilded} />
+          <TicketCopy gilded={gilded || prize === "discount"} prize={variant} />
         </div>
       ) : null}
 
@@ -129,9 +132,10 @@ export function Ticket({ pose, isLandscape }: Props) {
   );
 }
 
-function TicketCopy({ gilded }: { gilded: boolean }) {
+function TicketCopy({ gilded, prize }: { gilded: boolean; prize: Prize }) {
   const ink = gilded ? "rgba(42, 22, 10, 0.92)" : "rgba(186, 176, 160, 0.3)";
   const inkSoft = gilded ? "rgba(42, 22, 10, 0.7)" : "rgba(186, 176, 160, 0.22)";
+  const copy = PRIZE_COPY[prize];
 
   return (
     <div style={{ color: ink, transition: "color 0.95s ease" }}>
@@ -143,25 +147,21 @@ function TicketCopy({ gilded }: { gilded: boolean }) {
         <span className="w-9" />
       </div>
       <div className="mb-1 h-px w-full" style={{ background: inkSoft, transition: "background 0.95s ease" }} />
-      <p className="font-display whitespace-nowrap text-[clamp(1.7rem,4.8vw,3.35rem)] font-bold leading-none tracking-[0.04em]">
-        GOLDEN TICKET
+      <p className="font-display whitespace-nowrap text-[clamp(1.35rem,4.2vw,3.1rem)] font-bold leading-none tracking-[0.04em]">
+        {copy.ticketTitle}
       </p>
       <div className="mt-2 flex items-end justify-between gap-3">
         <p
-          className="font-display text-[0.68rem] font-semibold tracking-[0.2em] sm:text-xs"
+          className="whitespace-pre-line font-display text-[0.68rem] font-semibold tracking-[0.2em] sm:text-xs"
           style={{ color: inkSoft, transition: "color 0.95s ease" }}
         >
-          THREE TAPS
-          <br />
-          ADMIT ONE
+          {copy.ticketNote}
         </p>
         <p
-          className="text-right font-display text-[0.65rem] font-semibold tracking-[0.14em] sm:text-xs"
+          className="whitespace-pre-line text-right font-display text-[0.65rem] font-semibold tracking-[0.14em] sm:text-xs"
           style={{ color: inkSoft, transition: "color 0.95s ease" }}
         >
-          THE COCOA VAULT
-          <br />
-          GRAND DRAWING
+          {copy.ticketPlace}
         </p>
       </div>
     </div>

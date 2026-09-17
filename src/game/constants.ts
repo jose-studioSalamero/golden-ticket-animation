@@ -1,6 +1,6 @@
 export type TicketPose = "pocket" | "rising" | "edge" | "landed" | "gilded";
 
-export type GamePhase = "idle" | "unwrapping" | "revealing" | "celebrating";
+export type GamePhase = "idle" | "unwrapping" | "drawing" | "revealing" | "celebrating" | "error";
 
 export const MAX_TAPS = 3;
 

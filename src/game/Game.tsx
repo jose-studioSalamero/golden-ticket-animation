@@ -5,15 +5,23 @@ import { PrizeBanner } from "./PrizeBanner";
 import { Ticket } from "./Ticket";
 import { useGame } from "./useGame";
 import { WrapperArt } from "./WrapperArt";
+import { PRIZE_COPY, type Prize } from "./prizes";
 
-export function Game() {
-  const game = useGame();
+type Props = {
+  onReveal: () => Promise<Prize>;
+  onBack: () => void;
+};
+
+export function Game({ onReveal, onBack }: Props) {
+  const game = useGame({ onReveal });
   const celebrating = game.phase === "celebrating";
   const revealing = game.phase === "revealing" || celebrating;
-  const showIntro = !revealing;
+  const drawing = game.phase === "drawing";
+  const showIntro = !revealing && !drawing && game.phase !== "error";
+  const heading = game.prize ? PRIZE_COPY[game.prize].heading : "CONGRATULATIONS!";
 
   return (
-    <div className="relative h-svh w-full overflow-hidden bg-[#2a1148]">
+    <div className="relative h-svh w-full overflow-hidden bg-[#2a1148] select-none">
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,_rgba(58,22,96,0.9)_0%,_#2a1148_62%)]" />
 
       <ConfettiLayer burstKey={game.burstKey} raining={celebrating} />
@@ -32,7 +40,7 @@ export function Game() {
       </motion.header>
 
       <motion.p
-        className="gold-text pointer-events-none absolute inset-x-0 top-8 z-10 text-center font-display text-[clamp(1.4rem,3vw,2.1rem)] font-semibold tracking-[0.12em] sm:top-10"
+        className="gold-text pointer-events-none absolute inset-x-0 top-8 z-10 text-center font-display text-[clamp(1.15rem,3vw,2.1rem)] font-semibold tracking-[0.12em] sm:top-10"
         initial={{ opacity: 0, y: -8 }}
         animate={{
           opacity: celebrating ? 1 : 0,
@@ -40,8 +48,14 @@ export function Game() {
         }}
         transition={{ duration: 0.5, delay: celebrating ? 0.05 : 0 }}
       >
-        CONGRATULATIONS!
+        {heading}
       </motion.p>
+
+      {drawing ? (
+        <p className="gold-text pointer-events-none absolute inset-x-0 top-8 z-10 text-center font-display text-sm tracking-[0.22em] sm:top-10">
+          DRAWING YOUR PRIZE…
+        </p>
+      ) : null}
 
       <div className="absolute inset-0 z-10 flex items-center justify-center">
         <motion.div
@@ -89,7 +103,7 @@ export function Game() {
           >
             <div className="absolute inset-0 rounded-[4px] shadow-[0_24px_50px_rgba(0,0,0,0.45)]" />
             <ChocolateSquares />
-            <Ticket pose={game.ticketPose} isLandscape={game.isLandscape} />
+            <Ticket pose={game.ticketPose} isLandscape={game.isLandscape} prize={game.prize} />
             <WrapperArt taps={game.taps} />
           </motion.button>
         </motion.div>
@@ -105,7 +119,7 @@ export function Game() {
         </p>
         <button
           type="button"
-          onClick={game.reset}
+          onClick={onBack}
           className="border border-[#d9c89a]/70 px-5 py-1.5 font-display text-[0.7rem] tracking-[0.28em] text-[#f2e6c4] transition hover:border-[#f3dd8a] hover:text-white"
         >
           BACK
@@ -118,11 +132,24 @@ export function Game() {
           onClick={game.reset}
           className="absolute right-5 top-6 z-30 border border-[#f3dd8a]/70 px-4 py-1.5 font-display text-[0.65rem] tracking-[0.24em] text-[#f3dd8a] transition hover:bg-white/5"
         >
-          PLAY AGAIN
+          WATCH AGAIN
         </button>
       ) : null}
 
-      <PrizeBanner visible={celebrating} />
+      {game.phase === "error" && game.error ? (
+        <div className="absolute inset-x-0 bottom-8 z-30 mx-auto w-[min(92vw,28rem)] border border-[#ffb4a2]/40 bg-[#4a1828]/90 px-4 py-3 text-center">
+          <p className="font-body text-sm text-[#ffd4c8]">{game.error}</p>
+          <button
+            type="button"
+            onClick={game.reset}
+            className="mt-3 border border-[#ffd4c8]/50 px-4 py-1 font-display text-[0.65rem] tracking-[0.2em] text-[#ffd4c8]"
+          >
+            TRY THE BAR AGAIN
+          </button>
+        </div>
+      ) : null}
+
+      <PrizeBanner visible={celebrating} prize={game.prize} />
     </div>
   );
 }

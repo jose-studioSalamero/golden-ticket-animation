@@ -26,3 +26,9 @@ dist-ssr
 # Local reference only
 uploads
 agent-tools
+
+# Secrets and local player store
+.env
+.env.*
+!.env.example
+.data

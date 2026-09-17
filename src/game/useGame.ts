@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { MAX_TAPS, type GamePhase, type TicketPose } from "./constants";
+import type { Prize } from "./prizes";
 
 function wait(ms: number, bag: number[]) {
   return new Promise<void>((resolve) => {
@@ -8,15 +9,26 @@ function wait(ms: number, bag: number[]) {
   });
 }
 
-export function useGame() {
+type Options = {
+  onReveal: () => Promise<Prize>;
+};
+
+export function useGame({ onReveal }: Options) {
   const [taps, setTaps] = useState(0);
   const [phase, setPhase] = useState<GamePhase>("idle");
   const [ticketPose, setTicketPose] = useState<TicketPose>("pocket");
   const [isLandscape, setIsLandscape] = useState(false);
   const [pressed, setPressed] = useState(false);
   const [burstKey, setBurstKey] = useState(0);
+  const [prize, setPrize] = useState<Prize | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const timers = useRef<number[]>([]);
   const running = useRef(false);
+  const onRevealRef = useRef(onReveal);
+
+  useEffect(() => {
+    onRevealRef.current = onReveal;
+  }, [onReveal]);
 
   const clearTimers = useCallback(() => {
     timers.current.forEach((id) => window.clearTimeout(id));
@@ -32,9 +44,10 @@ export function useGame() {
     setIsLandscape(false);
     setPressed(false);
     setBurstKey(0);
+    setError(null);
   }, [clearTimers]);
 
-  const playReveal = useCallback(async () => {
+  const playReveal = useCallback(async (nextPrize: Prize) => {
     running.current = true;
     setPhase("revealing");
     setBurstKey((k) => k + 1);
@@ -52,14 +65,14 @@ export function useGame() {
     setTicketPose("landed");
     await wait(550, timers.current);
     if (!running.current) return;
-    setTicketPose("gilded");
+    if (nextPrize === "golden") setTicketPose("gilded");
     await wait(900, timers.current);
     if (!running.current) return;
     setPhase("celebrating");
   }, []);
 
   const tap = useCallback(() => {
-    if (phase === "revealing" || phase === "celebrating") return;
+    if (phase === "revealing" || phase === "celebrating" || phase === "drawing") return;
     if (taps >= MAX_TAPS) return;
 
     const next = taps + 1;
@@ -69,9 +82,23 @@ export function useGame() {
     window.setTimeout(() => setPressed(false), 160);
     if (next >= 2) setBurstKey((k) => k + 1);
     if (next >= MAX_TAPS) {
-      void playReveal();
+      if (prize) {
+        void playReveal(prize);
+        return;
+      }
+      setPhase("drawing");
+      void (async () => {
+        try {
+          const drawn = await onRevealRef.current();
+          setPrize(drawn);
+          await playReveal(drawn);
+        } catch (err) {
+          setError(err instanceof Error ? err.message : "The ticket stuck in the wrapper. Try again.");
+          setPhase("error");
+        }
+      })();
     }
-  }, [phase, playReveal, taps]);
+  }, [phase, playReveal, prize, taps]);
 
   useEffect(() => () => clearTimers(), [clearTimers]);
 
@@ -82,8 +109,10 @@ export function useGame() {
     isLandscape,
     pressed,
     burstKey,
+    prize,
+    error,
     tap,
     reset,
-    locked: phase === "revealing" || phase === "celebrating",
+    locked: phase === "revealing" || phase === "celebrating" || phase === "drawing",
   };
 }

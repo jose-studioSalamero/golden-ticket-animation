@@ -22,8 +22,7 @@ body {
   font-family: var(--font-body);
   color: #f4e7c5;
   -webkit-font-smoothing: antialiased;
-  user-select: none;
-  overflow: hidden;
+  overflow: auto;
 }
 
 #root {
