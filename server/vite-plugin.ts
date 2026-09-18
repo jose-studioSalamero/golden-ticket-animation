@@ -1,6 +1,6 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { Plugin } from "vite";
-import { routeApiRequest } from "./http";
+import { routeApiRequest } from "../api/goldleaf.js";
 
 export function goldleafApiPlugin(): Plugin {
   const middleware = async (

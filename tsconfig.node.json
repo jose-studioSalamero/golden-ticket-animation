@@ -4,7 +4,8 @@
     "target": "es2023",
     "lib": ["ES2023"],
     "types": ["node"],
-    "skipLibCheck": true,
+    "allowJs": true,
+    "checkJs": false,
     "module": "esnext",
     "moduleResolution": "bundler",
     "allowImportingTsExtensions": false,
@@ -16,5 +17,5 @@
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["vite.config.ts", "server", "api"]
+  "include": ["vite.config.ts", "server"]
 }

@@ -13,7 +13,7 @@ npm run dev
 
 Open [http://127.0.0.1:43173](http://127.0.0.1:43173).
 
-Local plays are stored in `.data/players.json`. A second submit with the same email shows **you have played before**.
+Local plays are kept in memory for this proof of concept. A second submit with the same email shows **you have played before** until the dev server restarts.
 
 ## How a play works
 
@@ -21,12 +21,12 @@ Local plays are stored in `.data/players.json`. A second submit with the same em
 2. `POST /api/register` looks the email up in the player store.
    - **New email** → save the player, issue a signed session, go to `/play`.
    - **Already played** → `you have played before`.
-3. Three taps unwrap the bar. `POST /api/unwrap` rolls the prize once:
+3. Three taps unwrap the bar. `POST /api/unwrap` reads the prize sealed into the play token:
    - `0.01%` Golden Ticket (`PRIZE_GOLDEN_RATE=0.0001`)
    - otherwise 5% off tickets
 4. Watching the animation again does not re-roll.
 
-On Vercel the player store is the [Runtime Cache](https://vercel.com/docs/functions/runtime-cache) (`getCache` from `@vercel/functions`) — Hobby-tier, no extra database. It is per-region and may evict under LRU pressure; that is enough for this proof of concept.
+Vercel Functions (`/api/register`, `/api/unwrap`) run the gate. Emails are remembered in-process for the POC; the prize is signed into the play token so unwrap stays stateless.
 
 ## Environment
 
