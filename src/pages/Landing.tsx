@@ -46,6 +46,10 @@ export function Landing() {
           navigate("/already-played");
           return;
         }
+        if (/server error has occurred/i.test(message) || /protected deployment/i.test(message)) {
+          setError("The chocolate bar is still warming up. Wait a moment and try again.");
+          return;
+        }
         setError(message);
         return;
       }

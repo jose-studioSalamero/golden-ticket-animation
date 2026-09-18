@@ -1,14 +1,16 @@
-import { handleUnwrapRequest, optionsResponse } from "../server/http";
-import { vercelHandler } from "../server/vercel-handler";
+import { handleUnwrapRequest } from "../server/http";
 
-export const runtime = "nodejs";
-
-export async function POST(request: Request) {
-  return handleUnwrapRequest(request);
+async function fetch(request: Request): Promise<Response> {
+  try {
+    return await handleUnwrapRequest(request);
+  } catch (err) {
+    console.error("unwrap failed", err);
+    return Response.json(
+      { ok: false, error: err instanceof Error ? err.message : "Something went wrong. Try again." },
+      { status: 500 },
+    );
+  }
 }
 
-export function OPTIONS() {
-  return optionsResponse();
-}
-
-export default vercelHandler(handleUnwrapRequest);
+export default { fetch };
+export { fetch as POST, fetch as OPTIONS };

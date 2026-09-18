@@ -1,6 +1,3 @@
-import { mkdir, readFile, writeFile } from "node:fs/promises";
-import path from "node:path";
-import { getCache } from "@vercel/functions";
 import { rollPrize } from "./prize";
 import { ALREADY_PLAYED_MESSAGE, type PlayerRecord, type Prize, type RegisterInput } from "./types";
 
@@ -62,17 +59,27 @@ function memoryStore(): Store {
   };
 }
 
-function createRuntimeCache() {
+type RuntimeCache = {
+  get: (key: string) => Promise<unknown>;
+  set: (
+    key: string,
+    value: PlayerRecord,
+    options: { ttl: number; tags: string[]; name: string },
+  ) => Promise<unknown>;
+};
+
+async function loadRuntimeCache(): Promise<RuntimeCache | null> {
   try {
-    return getCache({ namespace: "goldleaf-players" });
+    const mod = await import("@vercel/functions");
+    return mod.getCache({ namespace: "goldleaf-players" }) as RuntimeCache;
   } catch (err) {
-    console.error("runtime cache init failed", err);
+    console.error("runtime cache unavailable", err);
     return null;
   }
 }
 
-function runtimeCacheStore(): Store {
-  const cache = createRuntimeCache();
+async function vercelStore(): Promise<Store> {
+  const cache = await loadRuntimeCache();
   const fallback = memoryStore();
   if (!cache) return fallback;
 
@@ -118,36 +125,37 @@ function runtimeCacheStore(): Store {
   };
 }
 
-const filePath = () => path.join(process.cwd(), ".data/players.json");
+async function fileStore(): Promise<Store> {
+  const { mkdir, readFile, writeFile } = await import("node:fs/promises");
+  const path = await import("node:path");
+  const dest = () => path.join(process.cwd(), ".data/players.json");
+  let writeQueue: Promise<unknown> = Promise.resolve();
 
-let writeQueue: Promise<unknown> = Promise.resolve();
-
-function withLock<T>(fn: () => Promise<T>): Promise<T> {
-  const run = writeQueue.then(fn, fn);
-  writeQueue = run.then(
-    () => undefined,
-    () => undefined,
-  );
-  return run;
-}
-
-async function readPlayers(): Promise<PlayerRecord[]> {
-  try {
-    const raw = await readFile(filePath(), "utf8");
-    const parsed = JSON.parse(raw) as PlayerRecord[];
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
+  function withLock<T>(fn: () => Promise<T>): Promise<T> {
+    const run = writeQueue.then(fn, fn);
+    writeQueue = run.then(
+      () => undefined,
+      () => undefined,
+    );
+    return run;
   }
-}
 
-async function writePlayers(players: PlayerRecord[]): Promise<void> {
-  const dest = filePath();
-  await mkdir(path.dirname(dest), { recursive: true });
-  await writeFile(dest, JSON.stringify(players, null, 2));
-}
+  async function readPlayers(): Promise<PlayerRecord[]> {
+    try {
+      const raw = await readFile(dest(), "utf8");
+      const parsed = JSON.parse(raw) as PlayerRecord[];
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  }
 
-function fileStore(): Store {
+  async function writePlayers(players: PlayerRecord[]): Promise<void> {
+    const file = dest();
+    await mkdir(path.dirname(file), { recursive: true });
+    await writeFile(file, JSON.stringify(players, null, 2));
+  }
+
   return {
     async register(input) {
       return withLock(async () => {
@@ -175,6 +183,9 @@ function fileStore(): Store {
   };
 }
 
-export function getStore(): Store {
-  return process.env.VERCEL ? runtimeCacheStore() : fileStore();
+let storePromise: Promise<Store> | undefined;
+
+export function getStore(): Promise<Store> {
+  storePromise ??= process.env.VERCEL ? vercelStore() : fileStore();
+  return storePromise;
 }

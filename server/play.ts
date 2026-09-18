@@ -37,10 +37,10 @@ export async function registerPlayer(body: Record<string, unknown>): Promise<{
   email: string;
 }> {
   const input = parseRegisterInput(body);
-  const store = getStore();
+  const store = await getStore();
   try {
     const player = await store.register(input);
-    const token = issueSession({
+    const token = await issueSession({
       email: player.email,
       givenName: player.givenName,
       surname: player.surname,
@@ -62,11 +62,11 @@ export async function unwrapPrize(token: string): Promise<{
   alreadyUnwrapped: boolean;
   email: string;
 }> {
-  const session = readSession(token);
+  const session = await readSession(token);
   if (!session) {
     throw new ValidationError("This play session expired. Submit the form again.");
   }
-  const result = await getStore().unwrap(session.e);
+  const result = await (await getStore()).unwrap(session.e);
   return { ...result, email: session.e };
 }
 

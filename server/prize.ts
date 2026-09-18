@@ -1,4 +1,3 @@
-import { randomInt } from "node:crypto";
 import { GOLDEN_RATE_DEFAULT, type Prize } from "./types";
 
 export function goldenRate(): number {
@@ -14,5 +13,7 @@ export function rollPrize(rate = goldenRate()): Prize {
   const threshold = Math.round(rate * 1_000_000);
   if (threshold <= 0) return "discount";
   if (threshold >= 1_000_000) return "golden";
-  return randomInt(0, 1_000_000) < threshold ? "golden" : "discount";
+  const bytes = new Uint32Array(1);
+  crypto.getRandomValues(bytes);
+  return (bytes[0] as number) % 1_000_000 < threshold ? "golden" : "discount";
 }

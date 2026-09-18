@@ -1,14 +1,16 @@
-import { handleRegisterRequest, optionsResponse } from "../server/http";
-import { vercelHandler } from "../server/vercel-handler";
+import { handleRegisterRequest } from "../server/http";
 
-export const runtime = "nodejs";
-
-export async function POST(request: Request) {
-  return handleRegisterRequest(request);
+async function fetch(request: Request): Promise<Response> {
+  try {
+    return await handleRegisterRequest(request);
+  } catch (err) {
+    console.error("register failed", err);
+    return Response.json(
+      { ok: false, error: err instanceof Error ? err.message : "Something went wrong. Try again." },
+      { status: 500 },
+    );
+  }
 }
 
-export function OPTIONS() {
-  return optionsResponse();
-}
-
-export default vercelHandler(handleRegisterRequest);
+export default { fetch };
+export { fetch as POST, fetch as OPTIONS };
