@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Game } from "../game/Game";
 import type { Prize } from "../game/prizes";
+import { errorMessage } from "../lib/errorMessage";
 import { readPlaySession, writePlaySession } from "../session";
 
 export function Play() {
@@ -47,9 +48,9 @@ async function unwrapPrize(token: string): Promise<Prize> {
     },
     body: JSON.stringify({ token }),
   });
-  const data = (await res.json()) as { ok: boolean; prize?: Prize; error?: string };
+  const data = (await res.json()) as { ok?: boolean; prize?: Prize; error?: unknown };
   if (!data.ok || (data.prize !== "golden" && data.prize !== "discount")) {
-    throw new Error(data.error || "The ticket would not come free. Try again.");
+    throw new Error(errorMessage(data.error, "The ticket would not come free. Try again."));
   }
   return data.prize;
 }

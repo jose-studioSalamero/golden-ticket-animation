@@ -1,14 +1,10 @@
-import { createHash } from "node:crypto";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { getCache } from "@vercel/functions";
 import { rollPrize } from "./prize";
 import { ALREADY_PLAYED_MESSAGE, type PlayerRecord, type Prize, type RegisterInput } from "./types";
 
-const PLAYED_TAG = "goldleaf-played";
-const PRIZE_TAGS: Record<Prize, string> = {
-  golden: "prize-golden",
-  discount: "prize-discount",
-};
+const PLAYER_TTL_SECONDS = 60 * 60 * 24 * 120;
 
 export class PlayedBeforeError extends Error {
   constructor() {
@@ -26,145 +22,103 @@ function normalizeEmail(email: string): string {
   return email.trim().toLowerCase();
 }
 
-function memberHash(email: string): string {
-  return createHash("md5").update(normalizeEmail(email)).digest("hex");
+function makePlayer(input: RegisterInput): PlayerRecord {
+  return {
+    email: normalizeEmail(input.email),
+    givenName: input.givenName,
+    surname: input.surname,
+    consent: true,
+    registeredAt: new Date().toISOString(),
+    prize: null,
+    unwrappedAt: null,
+  };
 }
 
-function mailchimpConfig() {
-  const apiKey = process.env.MAILCHIMP_API_KEY?.trim();
-  if (!apiKey) return null;
-  const prefix =
-    process.env.MAILCHIMP_SERVER_PREFIX?.trim() ||
-    apiKey.split("-")[1] ||
-    "us19";
-  const listId = process.env.MAILCHIMP_LIST_ID?.trim() || "263b1eb688";
-  return { apiKey, prefix, listId };
+function memoryMap(): Map<string, PlayerRecord> {
+  const g = globalThis as typeof globalThis & { __goldleafPlayers?: Map<string, PlayerRecord> };
+  g.__goldleafPlayers ??= new Map();
+  return g.__goldleafPlayers;
 }
 
-async function mc(
-  config: NonNullable<ReturnType<typeof mailchimpConfig>>,
-  pathname: string,
-  init?: RequestInit,
-) {
-  const auth = Buffer.from(`goldleaf:${config.apiKey}`).toString("base64");
-  const res = await fetch(`https://${config.prefix}.api.mailchimp.com/3.0${pathname}`, {
-    ...init,
-    headers: {
-      Authorization: `Basic ${auth}`,
-      "Content-Type": "application/json",
-      ...(init?.headers ?? {}),
-    },
-  });
-  const text = await res.text();
-  let json: Record<string, unknown> = {};
-  if (text) {
-    try {
-      json = JSON.parse(text) as Record<string, unknown>;
-    } catch {
-      json = { detail: text };
-    }
-  }
-  return { ok: res.ok, status: res.status, json };
-}
-
-function prizeFromTags(tags: unknown): Prize | null {
-  const names = new Set(
-    Array.isArray(tags)
-      ? tags
-          .map((t) =>
-            typeof t === "string" ? t : t && typeof t === "object" && "name" in t ? String((t as { name: unknown }).name) : "",
-          )
-          .map((n) => n.toLowerCase())
-      : [],
-  );
-  if (names.has(PRIZE_TAGS.golden)) return "golden";
-  if (names.has(PRIZE_TAGS.discount)) return "discount";
-  return null;
-}
-
-function mailchimpStore(config: NonNullable<ReturnType<typeof mailchimpConfig>>): Store {
+function memoryStore(): Store {
+  const players = memoryMap();
   return {
     async register(input) {
       const email = normalizeEmail(input.email);
-      const hash = memberHash(email);
-      const existing = await mc(config, `/lists/${config.listId}/members/${hash}?exclude_fields=interests`);
-      if (existing.status === 200) {
-        throw new PlayedBeforeError();
-      }
-      if (existing.status !== 404) {
-        throw new Error("Could not reach the player list. Try again in a moment.");
-      }
-
-      const created = await mc(config, `/lists/${config.listId}/members`, {
-        method: "POST",
-        body: JSON.stringify({
-          email_address: email,
-          status: "subscribed",
-          merge_fields: {
-            FNAME: input.givenName,
-            LNAME: input.surname,
-          },
-          tags: [PLAYED_TAG],
-        }),
-      });
-
-      if (!created.ok) {
-        const title = String(created.json.title ?? "");
-        if (created.status === 400 && /exists/i.test(title)) {
-          throw new PlayedBeforeError();
-        }
-        throw new Error("Could not save your entry. Try again in a moment.");
-      }
-
-      return {
-        email,
-        givenName: input.givenName,
-        surname: input.surname,
-        consent: true,
-        registeredAt: new Date().toISOString(),
-        prize: null,
-        unwrappedAt: null,
-      };
+      if (players.has(email)) throw new PlayedBeforeError();
+      const record = makePlayer(input);
+      players.set(email, record);
+      return record;
     },
-
     async unwrap(email) {
-      const hash = memberHash(email);
-      const member = await mc(
-        config,
-        `/lists/${config.listId}/members/${hash}?include_fields=email_address,tags,merge_fields,status`,
-      );
-      if (member.status === 404) {
-        throw new Error("This play session is no longer valid.");
-      }
-      if (!member.ok) {
-        throw new Error("Could not reach the player list. Try again in a moment.");
-      }
-
-      const tags = await mc(config, `/lists/${config.listId}/members/${hash}/tags`);
-      const existingPrize = prizeFromTags(tags.json.tags);
-      if (existingPrize) {
-        return { prize: existingPrize, alreadyUnwrapped: true };
-      }
-
-      const prize = rollPrize();
-      const tagged = await mc(config, `/lists/${config.listId}/members/${hash}/tags`, {
-        method: "POST",
-        body: JSON.stringify({
-          tags: [{ name: PRIZE_TAGS[prize], status: "active" }],
-        }),
-      });
-      if (!tagged.ok) {
-        throw new Error("Could not save your prize. Try again in a moment.");
-      }
-      return { prize, alreadyUnwrapped: false };
+      const record = players.get(normalizeEmail(email));
+      if (!record) throw new Error("This play session is no longer valid.");
+      if (record.prize) return { prize: record.prize, alreadyUnwrapped: true };
+      record.prize = rollPrize();
+      record.unwrappedAt = new Date().toISOString();
+      players.set(record.email, record);
+      return { prize: record.prize, alreadyUnwrapped: false };
     },
   };
 }
 
-const filePath = () =>
-  process.env.VERCEL
-    ? "/tmp/goldleaf-players.json"
-    : path.join(process.cwd(), ".data/players.json");
+function createRuntimeCache() {
+  try {
+    return getCache({ namespace: "goldleaf-players" });
+  } catch (err) {
+    console.error("runtime cache init failed", err);
+    return null;
+  }
+}
+
+function runtimeCacheStore(): Store {
+  const cache = createRuntimeCache();
+  const fallback = memoryStore();
+  if (!cache) return fallback;
+
+  return {
+    async register(input) {
+      const email = normalizeEmail(input.email);
+      try {
+        const existing = (await cache.get(email)) as PlayerRecord | undefined;
+        if (existing) throw new PlayedBeforeError();
+        const record = makePlayer(input);
+        await cache.set(email, record, {
+          ttl: PLAYER_TTL_SECONDS,
+          tags: ["players"],
+          name: "goldleaf-player",
+        });
+        return record;
+      } catch (err) {
+        if (err instanceof PlayedBeforeError) throw err;
+        console.error("runtime cache register failed", err);
+        return fallback.register(input);
+      }
+    },
+    async unwrap(email) {
+      const key = normalizeEmail(email);
+      try {
+        const record = (await cache.get(key)) as PlayerRecord | undefined;
+        if (!record) throw new Error("This play session is no longer valid.");
+        if (record.prize) return { prize: record.prize, alreadyUnwrapped: true };
+        record.prize = rollPrize();
+        record.unwrappedAt = new Date().toISOString();
+        await cache.set(key, record, {
+          ttl: PLAYER_TTL_SECONDS,
+          tags: ["players"],
+          name: "goldleaf-player",
+        });
+        return { prize: record.prize, alreadyUnwrapped: false };
+      } catch (err) {
+        if (err instanceof Error && err.message === "This play session is no longer valid.") throw err;
+        console.error("runtime cache unwrap failed", err);
+        return fallback.unwrap(email);
+      }
+    },
+  };
+}
+
+const filePath = () => path.join(process.cwd(), ".data/players.json");
 
 let writeQueue: Promise<unknown> = Promise.resolve();
 
@@ -199,49 +153,28 @@ function fileStore(): Store {
       return withLock(async () => {
         const email = normalizeEmail(input.email);
         const players = await readPlayers();
-        if (players.some((p) => p.email === email)) {
-          throw new PlayedBeforeError();
-        }
-        const record: PlayerRecord = {
-          email,
-          givenName: input.givenName,
-          surname: input.surname,
-          consent: true,
-          registeredAt: new Date().toISOString(),
-          prize: null,
-          unwrappedAt: null,
-        };
+        if (players.some((p) => p.email === email)) throw new PlayedBeforeError();
+        const record = makePlayer(input);
         players.push(record);
         await writePlayers(players);
         return record;
       });
     },
-
     async unwrap(email) {
       return withLock(async () => {
         const players = await readPlayers();
         const record = players.find((p) => p.email === normalizeEmail(email));
-        if (!record) {
-          throw new Error("This play session is no longer valid.");
-        }
-        if (record.prize) {
-          return { prize: record.prize, alreadyUnwrapped: true };
-        }
-        const prize = rollPrize();
-        record.prize = prize;
+        if (!record) throw new Error("This play session is no longer valid.");
+        if (record.prize) return { prize: record.prize, alreadyUnwrapped: true };
+        record.prize = rollPrize();
         record.unwrappedAt = new Date().toISOString();
         await writePlayers(players);
-        return { prize, alreadyUnwrapped: false };
+        return { prize: record.prize, alreadyUnwrapped: false };
       });
     },
   };
 }
 
 export function getStore(): Store {
-  const config = mailchimpConfig();
-  return config ? mailchimpStore(config) : fileStore();
-}
-
-export function storeMode(): "mailchimp" | "mock" {
-  return mailchimpConfig() ? "mailchimp" : "mock";
+  return process.env.VERCEL ? runtimeCacheStore() : fileStore();
 }

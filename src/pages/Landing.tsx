@@ -1,6 +1,7 @@
-import { useNavigate } from "react-router-dom";
-import { clearPlaySession, writePlaySession } from "../session";
 import { useState, type FormEvent } from "react";
+import { useNavigate } from "react-router-dom";
+import { errorMessage } from "../lib/errorMessage";
+import { clearPlaySession, writePlaySession } from "../session";
 
 export function Landing() {
   const navigate = useNavigate();
@@ -23,15 +24,15 @@ export function Landing() {
           Accept: "application/json",
         },
         body: JSON.stringify({
-          FNAME: givenName,
-          LNAME: surname,
-          EMAIL: email,
-          name: consent ? "on" : "",
+          givenName,
+          surname,
+          email,
+          consent,
         }),
       });
       const data = (await res.json()) as {
-        ok: boolean;
-        error?: string;
+        ok?: boolean;
+        error?: unknown;
         token?: string;
         givenName?: string;
         surname?: string;
@@ -40,11 +41,12 @@ export function Landing() {
       };
 
       if (!data.ok || !data.token) {
-        if (data.code === "already_played" || data.error === "you have played before") {
+        const message = errorMessage(data.error ?? data);
+        if (data.code === "already_played" || message === "you have played before") {
           navigate("/already-played");
           return;
         }
-        setError(data.error || "Something went wrong. Try again.");
+        setError(message);
         return;
       }
 
@@ -111,7 +113,7 @@ export function Landing() {
           <label className="flex cursor-pointer items-start gap-3 rounded-sm border border-[#d9c89a]/25 bg-black/15 px-3 py-3">
             <input
               type="checkbox"
-              name="name"
+              name="consent"
               required
               checked={consent}
               onChange={(e) => setConsent(e.target.checked)}

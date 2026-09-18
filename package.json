@@ -10,6 +10,7 @@
     "preview": "vite preview --host 127.0.0.1 --port 43173"
   },
   "dependencies": {
+    "@vercel/functions": "^3.9.8",
     "framer-motion": "^12.23.12",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",

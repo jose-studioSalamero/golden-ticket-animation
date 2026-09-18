@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { errorMessage } from "../lib/errorMessage";
 import { MAX_TAPS, type GamePhase, type TicketPose } from "./constants";
 import type { Prize } from "./prizes";
 
@@ -93,7 +94,7 @@ export function useGame({ onReveal }: Options) {
           setPrize(drawn);
           await playReveal(drawn);
         } catch (err) {
-          setError(err instanceof Error ? err.message : "The ticket stuck in the wrapper. Try again.");
+          setError(errorMessage(err, "The ticket stuck in the wrapper. Try again."));
           setPhase("error");
         }
       })();

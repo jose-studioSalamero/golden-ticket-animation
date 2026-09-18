@@ -1,8 +1,14 @@
-import type { IncomingMessage, ServerResponse } from "node:http";
-import { handleRegister } from "../server/http";
+import { handleRegisterRequest, optionsResponse } from "../server/http";
+import { vercelHandler } from "../server/vercel-handler";
 
-export const config = { runtime: "nodejs" as const };
+export const runtime = "nodejs";
 
-export default async function handler(req: IncomingMessage, res: ServerResponse) {
-  await handleRegister(req, res);
+export async function POST(request: Request) {
+  return handleRegisterRequest(request);
 }
+
+export function OPTIONS() {
+  return optionsResponse();
+}
+
+export default vercelHandler(handleRegisterRequest);
