@@ -9,12 +9,14 @@ export function Landing() {
   const [surname, setSurname] = useState("");
   const [email, setEmail] = useState("");
   const [consent, setConsent] = useState(false);
-  const [error, setError] = useState(readQueryError);
+  const [error, setError] = useState<string | null>(readQueryError);
+  const [alreadyPlayed, setAlreadyPlayed] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
+    setAlreadyPlayed(false);
     setSubmitting(true);
     try {
       const res = await fetch("/api/register", {
@@ -43,7 +45,7 @@ export function Landing() {
       if (!data.ok || !data.token) {
         const message = errorMessage(data.error ?? data);
         if (data.code === "already_played" || message === "you have played before") {
-          navigate("/already-played");
+          setAlreadyPlayed(true);
           return;
         }
         if (/server error has occurred/i.test(message) || /protected deployment/i.test(message)) {
@@ -70,16 +72,16 @@ export function Landing() {
   }
 
   return (
-    <div className="relative min-h-svh overflow-y-auto bg-[#2a1148]">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,_rgba(82,32,128,0.55)_0%,_#2a1148_58%)]" />
-      <main className="relative mx-auto flex min-h-svh w-full max-w-xl flex-col justify-center px-5 py-12 sm:px-8">
-        <p className="gold-text text-center font-script text-4xl leading-none sm:text-5xl">Goldleaf</p>
-        <h1 className="gold-text mt-4 text-center font-display text-[clamp(1.15rem,3.4vw,1.7rem)] font-semibold tracking-[0.18em]">
-          TAKE ME TO THE CHOCOLATE BAR
-        </h1>
-        <p className="mx-auto mt-3 max-w-md text-center font-body text-base leading-relaxed text-[#f4e7c5]/80 sm:text-lg">
-          One play per email. Unwrap a Goldleaf bar for a vanishingly rare Golden Ticket — or 5% off tickets.
-        </p>
+    <div className="relative flex min-h-svh items-center justify-center overflow-y-auto bg-[#2a1148] px-4 py-10">
+      <div className="entry-card">
+        <header className="flex w-full flex-col items-center gap-4 text-center">
+          <h1 className="font-brygada text-[clamp(1.65rem,4vw,2.25rem)] leading-[1.2] font-semibold text-[#480401]">
+            READY TO UNWRAP YOUR CHANCE?
+          </h1>
+          <p className="font-brygada max-w-[32rem] text-[1.125rem] leading-[150%] font-normal text-black">
+            You found the special chocolate bar. Tell us who you are, then tap to unwrap your Golden Ticket
+          </p>
+        </header>
 
         <form
           name="Contact Form"
@@ -87,18 +89,18 @@ export function Landing() {
           method="post"
           action="/api/register"
           onSubmit={onSubmit}
-          className="mt-8 space-y-4"
+          className="flex w-full flex-col gap-8"
         >
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid w-full gap-8 sm:grid-cols-2">
             <Field
-              label="Given Name*"
+              label="Given Name *"
               name="FNAME"
               autoComplete="given-name"
               value={givenName}
               onChange={setGivenName}
             />
             <Field
-              label="Surname*"
+              label="Surname *"
               name="LNAME"
               autoComplete="family-name"
               value={surname}
@@ -106,7 +108,7 @@ export function Landing() {
             />
           </div>
           <Field
-            label="Email*"
+            label="Email *"
             name="EMAIL"
             type="email"
             autoComplete="email"
@@ -114,36 +116,58 @@ export function Landing() {
             onChange={setEmail}
           />
 
-          <label className="flex cursor-pointer items-start gap-3 rounded-sm border border-[#d9c89a]/25 bg-black/15 px-3 py-3">
+          <label className="flex cursor-pointer items-start gap-3">
             <input
               type="checkbox"
               name="consent"
               required
               checked={consent}
               onChange={(e) => setConsent(e.target.checked)}
-              className="mt-1 size-4 shrink-0 accent-[#d4b056]"
+              className="mt-1 size-4 shrink-0 accent-black"
             />
-            <span className="font-body text-sm leading-snug text-[#f4e7c5]/85">
+            <span className="font-brygada text-[1.125rem] leading-[150%] font-normal text-black">
               I agree to receive marketing and promotional materials from Broadway International Group and Great
               Entertainment Group *
             </span>
           </label>
 
-          {error ? (
-            <p role="alert" className="border border-[#ffb4a2]/40 bg-[#4a1828]/70 px-3 py-2 font-body text-sm text-[#ffd4c8]">
-              {error}
-            </p>
-          ) : null}
-
-          <button
-            type="submit"
-            disabled={submitting}
-            className="w-full bg-[linear-gradient(180deg,#f4e19a_0%,#e0b84a_48%,#c4921e_100%)] px-5 py-3.5 font-display text-sm font-semibold tracking-[0.18em] text-[#4a2a12] transition hover:brightness-110 disabled:cursor-wait disabled:opacity-70"
-          >
-            {submitting ? "CHECKING THE LIST…" : "TAKE ME TO THE CHOCOLATE BAR"}
-          </button>
+          {alreadyPlayed ? null : (
+            <button
+              type="submit"
+              disabled={submitting}
+              className="mx-auto border border-[#480401] px-8 py-3 font-brygada text-[1.125rem] tracking-[0.12em] text-[#480401] uppercase transition hover:bg-[#480401] hover:text-[#fcf395] disabled:cursor-wait disabled:opacity-70"
+            >
+              {submitting ? "Checking…" : "Unwrap"}
+            </button>
+          )}
         </form>
-      </main>
+
+        {alreadyPlayed ? (
+          <div className="already-played-alert" role="alert">
+            <p className="flex items-center justify-center gap-2 text-center text-[1.125rem] leading-[150%] font-semibold tracking-[0.08em] text-black uppercase">
+              <WarningMark />
+              You have already played
+            </p>
+            <p className="max-w-[28rem] text-center">
+              It looks like this email address has already entered the factory. Each email address may play only
+              once, to keep the giveaway fair for everyone.
+            </p>
+            <button
+              type="button"
+              onClick={() => setAlreadyPlayed(false)}
+              className="border border-black px-8 py-2.5 font-brygada text-[1.125rem] tracking-[0.16em] text-black uppercase"
+            >
+              Back
+            </button>
+          </div>
+        ) : null}
+
+        {error && !alreadyPlayed ? (
+          <div className="already-played-alert" role="alert">
+            <p className="text-center">{error}</p>
+          </div>
+        ) : null}
+      </div>
     </div>
   );
 }
@@ -169,8 +193,8 @@ function Field({
   autoComplete?: string;
 }) {
   return (
-    <label className="block">
-      <span className="font-display text-[0.68rem] tracking-[0.22em] text-[#f2e6c4]">{label}</span>
+    <label className="flex w-full flex-col gap-3">
+      <span className="font-brygada text-[1.125rem] leading-[150%] font-normal text-black">{label}</span>
       <input
         type={type}
         name={name}
@@ -178,8 +202,17 @@ function Field({
         value={value}
         autoComplete={autoComplete}
         onChange={(e) => onChange(e.target.value)}
-        className="mt-1.5 w-full border border-[#d9c89a]/50 bg-[#1b0a30]/70 px-3 py-2.5 font-body text-base text-[#fff8e8] outline-none transition placeholder:text-[#f4e7c5]/30 focus:border-[#f3dd8a]"
+        className="entry-field"
       />
     </label>
+  );
+}
+
+function WarningMark() {
+  return (
+    <svg viewBox="0 0 24 24" className="size-5 shrink-0" aria-hidden>
+      <path fill="none" stroke="currentColor" strokeWidth="1.8" d="M12 3.6 21.2 20.2H2.8L12 3.6Z" />
+      <path fill="currentColor" d="M11.15 9.2h1.7l-.22 6.1h-1.26L11.15 9.2Zm.08 7.55h1.54v1.62h-1.54V16.75Z" />
+    </svg>
   );
 }

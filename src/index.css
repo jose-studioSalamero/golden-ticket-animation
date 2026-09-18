@@ -4,9 +4,11 @@
   --font-display: "Cinzel", ui-serif, Georgia, serif;
   --font-body: "Cormorant Garamond", ui-serif, Georgia, serif;
   --font-script: "Great Vibes", cursive;
+  --font-brygada: "Brygada 1918", "Cormorant Garamond", ui-serif, Georgia, serif;
   --color-stage: #2a1148;
   --color-gold: #d4b056;
   --color-gold-bright: #f3dd8a;
+  --golden-diagnal: linear-gradient(128deg, #bd7824 0%, #fcf395 50%, #bd7824 100%);
 }
 
 html,
@@ -31,6 +33,63 @@ body {
 
 button {
   font-family: inherit;
+}
+
+.entry-card {
+  display: flex;
+  width: 40.5rem;
+  max-width: 100%;
+  padding: 3rem;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 3rem;
+  background: var(--golden-diagnal, linear-gradient(128deg, #bd7824 0%, #fcf395 50%, #bd7824 100%));
+}
+
+.entry-field {
+  width: 100%;
+  border: none;
+  border-bottom: 1px solid #000;
+  border-radius: 0;
+  background: transparent;
+  padding: 0.2rem 0 0.45rem;
+  font-family: var(--font-brygada);
+  font-size: 1.125rem;
+  font-weight: 400;
+  line-height: 150%;
+  color: #000;
+  outline: none;
+}
+
+.entry-field:focus {
+  border-bottom-color: #480401;
+}
+
+.already-played-alert {
+  display: flex;
+  padding: 1.5rem;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 1.5rem;
+  align-self: stretch;
+  border: 1px solid #fff;
+  background: rgba(255, 255, 255, 0.5);
+  color: #000;
+  font-family: var(--font-brygada);
+  font-size: 1.125rem;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 150%;
+}
+
+@media (max-width: 44rem) {
+  .entry-card {
+    width: 100%;
+    padding: 1.75rem 1.25rem;
+    gap: 2rem;
+  }
 }
 
 .gold-text {
