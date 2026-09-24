@@ -6,7 +6,7 @@ const redis = new Redis({
 
 const ALLOWED_ORIGINS = new Set([
   "https://charlie-chocolate-hk.webflow.io",
-  "https://YOUR-PRODUCTION-DOMAIN.com",
+  "https://charliemusicalhk.com/",
 ]);
 
 function setCors(req, res) {
