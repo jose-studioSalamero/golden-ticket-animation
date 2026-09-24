@@ -12,7 +12,7 @@ const MC_BASE    = `https://${MC_SERVER}.api.mailchimp.com/3.0`;
 
 const ALLOWED_ORIGINS = new Set([
   "https://charlie-chocolate-hk.webflow.io",
-  "https://YOUR-PRODUCTION-DOMAIN.com", // add once live
+  "https://charliemusicalhk.com", // add once live
 ]);
 
 const hashEmail = (email) =>
