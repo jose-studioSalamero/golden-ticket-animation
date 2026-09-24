@@ -1,7 +1,9 @@
 import crypto from "node:crypto";
-import { Redis } from "@upstash/redis";
-
-const redis = Redis.fromEnv();
+import { Redis } from '@upstash/redis';
+const redis = new Redis({
+  url: process.env.KV_REST_API_URL,
+  token: process.env.KV_REST_API_TOKEN,
+});
 
 const MC_API_KEY = process.env.MAILCHIMP_API_KEY;      // e.g. "xxxx...xxxx-us21"
 const MC_SERVER  = MC_API_KEY.split("-").pop();         // "us21"
