@@ -1,3 +1,5 @@
+import { Redis } from "@upstash/redis";
+
 const ALREADY_PLAYED_MESSAGE = "you have played before";
 const GOLDEN_RATE_DEFAULT = 0.0001;
 const SESSION_TTL_MS = 2 * 60 * 60 * 1000;
@@ -7,6 +9,20 @@ const CORS_HEADERS = {
   "Access-Control-Allow-Methods": "POST, OPTIONS, GET",
   "Access-Control-Allow-Headers": "Content-Type, Accept",
 };
+
+// Vercel's KV env vars use the KV_REST_API_* names, not the UPSTASH_* names
+// that Redis.fromEnv() looks for by default, so we wire it up explicitly.
+const redis = new Redis({
+  url: process.env.KV_REST_API_URL,
+  token: process.env.KV_REST_API_TOKEN,
+});
+
+const PLAYER_KEY_PREFIX = "goldleaf:player:";
+const GOLDEN_WINNER_KEY = "goldleaf:golden:winner";
+
+function playerKey(email) {
+  return `${PLAYER_KEY_PREFIX}${email}`;
+}
 
 export class PlayedBeforeError extends Error {
   constructor() {
@@ -75,10 +91,22 @@ function rollPrize(rate = goldenRate()) {
   return bytes[0] % 1_000_000 < threshold ? "golden" : "discount";
 }
 
-function players() {
-  const g = globalThis;
-  g.__goldleafPlayers ??= new Map();
-  return g.__goldleafPlayers;
+/**
+ * Atomically tries to claim the single golden-ticket slot for this email.
+ * Returns true if this call is the one that wins it, false if it's already taken.
+ */
+async function claimGoldenSlot(email) {
+  const result = await redis.set(
+    GOLDEN_WINNER_KEY,
+    JSON.stringify({ email, claimedAt: new Date().toISOString() }),
+    { nx: true }
+  );
+  return result === "OK" || result === true;
+}
+
+export async function getGoldenWinner() {
+  const existing = await redis.get(GOLDEN_WINNER_KEY);
+  return existing ? { claimed: true, winner: existing } : { claimed: false };
 }
 
 export async function issueSession(input) {
@@ -152,23 +180,53 @@ export function parseRegisterInput(body) {
 export async function registerPlayer(body) {
   const input = parseRegisterInput(body);
   const email = input.email.trim().toLowerCase();
-  const list = players();
-  if (list.has(email)) throw new PlayedBeforeError();
-  const prize = rollPrize();
-  list.set(email, { email, prize, registeredAt: new Date().toISOString() });
-  const token = await issueSession({
-    email,
-    givenName: input.givenName,
-    surname: input.surname,
-    prize,
-  });
-  return {
-    token,
-    givenName: input.givenName,
-    surname: input.surname,
-    email,
-    prize,
-  };
+
+  // Step 1: atomically reserve this email so no two requests (even on
+  // different serverless instances) can both proceed past this point.
+  const reserved = await redis.set(
+    playerKey(email),
+    JSON.stringify({ email, status: "pending", registeredAt: new Date().toISOString() }),
+    { nx: true }
+  );
+  if (reserved !== "OK" && reserved !== true) {
+    throw new PlayedBeforeError();
+  }
+
+  try {
+    // Step 2: roll the prize as before.
+    let prize = rollPrize();
+
+    // Step 3: if they rolled golden, they still have to win the race for
+    // the single golden slot. If someone already has it, downgrade gracefully.
+    if (prize === "golden") {
+      const wonGolden = await claimGoldenSlot(email);
+      if (!wonGolden) prize = "discount";
+    }
+
+    // Step 4: finalize their record now that the prize is settled.
+    const record = { email, prize, registeredAt: new Date().toISOString() };
+    await redis.set(playerKey(email), JSON.stringify(record));
+
+    const token = await issueSession({
+      email,
+      givenName: input.givenName,
+      surname: input.surname,
+      prize,
+    });
+
+    return {
+      token,
+      givenName: input.givenName,
+      surname: input.surname,
+      email,
+      prize,
+    };
+  } catch (err) {
+    // If anything after the reservation fails, release the slot so the
+    // player isn't permanently locked out by a transient error.
+    await redis.del(playerKey(email)).catch(() => {});
+    throw err;
+  }
 }
 
 export async function unwrapPrize(token) {
