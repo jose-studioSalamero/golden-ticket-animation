@@ -23,7 +23,9 @@ export class ValidationError extends Error {
 }
 
 function secret() {
-  return (typeof process !== "undefined" && process.env?.SESSION_SECRET?.trim()) || "goldleaf-prototype-secret";
+  const value = typeof process !== "undefined" && process.env?.SESSION_SECRET?.trim();
+  if (!value) throw new Error("SESSION_SECRET is not set");
+  return value;
 }
 
 function bytesToB64url(bytes) {
