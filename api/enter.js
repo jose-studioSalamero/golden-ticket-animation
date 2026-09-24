@@ -5,14 +5,18 @@ const redis = new Redis({
   token: process.env.KV_REST_API_TOKEN,
 });
 
-const MC_API_KEY = process.env.MAILCHIMP_API_KEY;      // e.g. "xxxx...xxxx-us21"
-const MC_SERVER  = MC_API_KEY.split("-").pop();         // "us21"
-const MC_LIST_ID = process.env.MAILCHIMP_LIST_ID;       // "da7390e84b"
+const MC_API_KEY = process.env.MAILCHIMP_API_KEY;
+const MC_SERVER  = MC_API_KEY.split("-").pop();
+const MC_LIST_ID = process.env.MAILCHIMP_LIST_ID;
 const MC_BASE    = `https://${MC_SERVER}.api.mailchimp.com/3.0`;
+
+const WIN_WINDOW_START = new Date(process.env.WIN_WINDOW_START);
+const WIN_WINDOW_END   = new Date(process.env.WIN_WINDOW_END);
+const WIN_PROBABILITY  = parseFloat(process.env.WIN_PROBABILITY);
 
 const ALLOWED_ORIGINS = new Set([
   "https://charlie-chocolate-hk.webflow.io",
-  "https://charliemusicalhk.com", // add once live
+  "https://charliemusicalhk.com",
 ]);
 
 const hashEmail = (email) =>
@@ -57,7 +61,7 @@ export default async function handler(req, res) {
     headers: { Authorization: auth, "Content-Type": "application/json" },
     body: JSON.stringify({
       email_address: email,
-      status_if_new: "subscribed", // consent is mandatory, so always subscribe
+      status_if_new: "subscribed",
       merge_fields: { FNAME: firstName, LNAME: lastName },
       tags: ["goldleaf-giveaway"],
     }),
@@ -67,12 +71,32 @@ export default async function handler(req, res) {
     return res.status(502).json({ error: "mailchimp_upsert_failed" });
   }
 
+  // ---- Win logic runs per-request, after signup succeeds, using this request's `email` ----
+  const now = Date.now();
+  const withinWinWindow = now >= WIN_WINDOW_START.getTime() && now <= WIN_WINDOW_END.getTime();
+
+  let won = false;
+
+  if (withinWinWindow) {
+    const alreadyClaimed = await redis.get("goldleaf:winner_claimed");
+
+    if (!alreadyClaimed) {
+      const roll = Math.random() < WIN_PROBABILITY;
+      if (roll) {
+        const claimed = await redis.set("goldleaf:winner_claimed", email, { nx: true });
+        if (claimed) {
+          won = true;
+        }
+      }
+    }
+  }
+
   // Single-use play token, valid for 15 minutes, stored server-side.
   const token = crypto.randomUUID();
   await redis.set(
     `play:${token}`,
-    JSON.stringify({ email, firstName }),
-    { ex: 900 } // seconds
+    JSON.stringify({ email, firstName, won }),
+    { ex: 900 }
   );
 
   return res.status(200).json({ status: "ok", token });
