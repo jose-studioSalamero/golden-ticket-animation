@@ -6,7 +6,7 @@ const redis = new Redis({
 
 const ALLOWED_ORIGINS = new Set([
   "https://charlie-chocolate-hk.webflow.io",
-  "https://charliemusicalhk.com/",
+  "https://charliemusicalhk.com",   // fixed: removed trailing slash so it actually matches the browser's Origin header
 ]);
 
 function setCors(req, res) {
@@ -34,5 +34,8 @@ export default async function handler(req, res) {
   await redis.del(key); // consume it — single use, prevents link sharing/reuse
 
   const data = typeof raw === "string" ? JSON.parse(raw) : raw;
-  return res.status(200).json({ status: "ok", firstName: data.firstName });
+
+  // fixed: `won` was computed and stored in /api/enter but never sent back here —
+  // without it the frontend has no way to know which animation to render
+  return res.status(200).json({ status: "ok", firstName: data.firstName, won: data.won });
 }
